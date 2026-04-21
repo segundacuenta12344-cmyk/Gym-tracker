@@ -173,10 +173,17 @@ function AddExerciseForm({ color, onAdd, onCancel }) {
   );
 }
 
-function RoutineView({ routineName, routines, onBack, onUpdateRoutine, onAddSession }) {
+function RoutineView({ routineName, routines, onBack, onUpdateRoutine, onAddSession, lastSession }) {
   const routine = routines[routineName];
   const [sets, setSets] = useState(() =>
-    Object.fromEntries(routine.exercises.map(ex => [ex.id, Array.from({length: routine.defaultSets[ex.id]||3}, ()=>({kg:"",reps:""}))]))
+    Object.fromEntries(routine.exercises.map(ex => {
+      const prev = lastSession?.sets?.[ex.id];
+      const numSets = prev?.length || routine.defaultSets[ex.id] || 3;
+      return [ex.id, Array.from({length: numSets}, (_,i) => ({
+        kg: prev?.[i]?.kg ?? "",
+        reps: prev?.[i]?.reps ?? "",
+      }))];
+    }))
   );
   const [note, setNote] = useState("");
   const [saved, setSaved] = useState(false);
@@ -365,7 +372,8 @@ function App() {
       )}
 
       {view==="routine"&&active&&(
-        <RoutineView routineName={active} routines={routines} onBack={()=>setView("home")} onUpdateRoutine={updRoutine} onAddSession={addSession}/>
+        <RoutineView routineName={active} routines={routines} onBack={()=>setView("home")} onUpdateRoutine={updRoutine} onAddSession={addSession}
+          lastSession={[...sessions].reverse().find(s=>s.routine===active)}/>
       )}
       {view==="history"&&(
         <HistoryView sessions={sessions} onBack={()=>setView("home")} onDelete={delSession}/>
