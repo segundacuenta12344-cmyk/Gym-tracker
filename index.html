@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0D0D0D" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="PPL Tracker" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon.png" />
+  <title>PPL Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; background: #0D0D0D; font-family: 'Syne', sans-serif; color: #fff; }
+    body { overscroll-behavior: none; }
+    input[type=number]::-webkit-outer-spin-button,
+    input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
+    input[type=number] { -moz-appearance: textfield; }
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 99px; }
+    #app { min-height: 100vh; padding: 40px 20px 40px; max-width: 480px; margin: 0 auto; }
+    .btn { border: none; cursor: pointer; font-family: 'Syne', sans-serif; display: flex; align-items: center; justify-content: center; }
+    input, textarea { font-family: 'Syne', sans-serif; }
+    .loading { min-height: 100vh; display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.3); font-family: monospace; font-size: 13px; letter-spacing: 0.1em; }
+  </style>
+</head>
+<body>
+  <div id="app"><div class="loading">CARGANDO...</div></div>
+
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script type="text/babel" data-presets="react">
+
+const { useState, useEffect } = React;
+
+const INITIAL_ROUTINES = {
+  "Push A": {
+    color: "#FF6B35", emoji: "🔥",
+    exercises: [
+      { id: 1, name: "Press banca barra", repsRange: "5–6" },
+      { id: 2, name: "Press inclinado mancuernas", repsRange: "8–10" },
+      { id: 3, name: "Press militar barra", repsRange: "5–6" },
+      { id: 4, name: "Elevaciones laterales", repsRange: "12–15" },
+      { id: 5, name: "Fondos", repsRange: "6–8" },
+      { id: 6, name: "Tríceps polea", repsRange: "12–15" },
+    ],
+    defaultSets: { 1:4, 2:3, 3:3, 4:3, 5:3, 6:2 },
+  },
+  "Pull A": {
+    color: "#4ECDC4", emoji: "💪",
+    exercises: [
+      { id: 7, name: "Jalón / Dominadas", repsRange: "5–6" },
+      { id: 8, name: "Remo barra", repsRange: "5–6" },
+      { id: 9, name: "Remo máquina unilateral", repsRange: "8–10" },
+      { id: 10, name: "Face pull", repsRange: "12–15" },
+      { id: 11, name: "Curl barra", repsRange: "8–10" },
+      { id: 12, name: "Curl martillo", repsRange: "10–12" },
+    ],
+    defaultSets: { 7:4, 8:4, 9:3, 10:3, 11:3, 12:2 },
+  },
+  "Legs": {
+    color: "#A855F7", emoji: "🦵",
+    exercises: [
+      { id: 13, name: "Sentadilla", repsRange: "5–6" },
+      { id: 14, name: "Prensa", repsRange: "10–12" },
+      { id: 15, name: "Peso muerto rumano", repsRange: "8–10" },
+      { id: 16, name: "Curl femoral", repsRange: "10–12" },
+      { id: 17, name: "Extensión cuádriceps", repsRange: "12–15" },
+      { id: 18, name: "Gemelos", repsRange: "12–20" },
+    ],
+    defaultSets: { 13:4, 14:3, 15:3, 16:3, 17:2, 18:4 },
+  },
+};
+
+const DAYS = ["Push A", "Pull A", "Legs"];
+let nextId = 100;
+
+const btnBase = { border:"none", cursor:"pointer", fontFamily:"'Syne',sans-serif", display:"flex", alignItems:"center", justifyContent:"center" };
+
+function ls(key, fallback) {
+  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch { return fallback; }
+}
+function lsSave(key, val) {
+  try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
+}
+
+function SetInput({ value, onChange, color }) {
+  return (
+    <input type="number" min="0" step="0.5" placeholder="—" value={value}
+      onChange={(e) => onChange(e.target.value)}
+      style={{ width:"100%", background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.12)", borderRadius:"6px", color:"#fff", padding:"7px 4px", fontSize:"14px", textAlign:"center", outline:"none", transition:"border-color 0.2s" }}
+      onFocus={(e) => (e.target.style.borderColor = color)}
+      onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.12)")}
+    />
+  );
+}
+
+function ExerciseCard({ exercise, color, sets, onChangeSet, onAddSet, onRemoveSet, onRemoveExercise }) {
+  const allDone = sets.length > 0 && sets.every(s => s.kg && s.reps);
+  const n = sets.length;
+  return (
+    <div style={{ background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:"12px", padding:"14px", marginBottom:"10px" }}>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"10px" }}>
+        <div style={{ flex:1, minWidth:0 }}>
+          <span style={{ fontWeight:700, fontSize:"14px", color:"#fff" }}>{exercise.name}</span>
+          <span style={{ marginLeft:"8px", fontSize:"11px", color:"rgba(255,255,255,0.35)", fontFamily:"monospace" }}>{n}× · {exercise.repsRange}</span>
+        </div>
+        <div style={{ display:"flex", gap:"5px", alignItems:"center" }}>
+          {allDone && <span style={{ color, fontSize:"14px", marginRight:"4px" }}>✓</span>}
+          <button onClick={onRemoveExercise}
+            style={{ ...btnBase, background:"rgba(255,255,255,0.05)", borderRadius:"6px", width:"28px", height:"28px", fontSize:"13px", color:"rgba(255,100,100,0.6)", flexShrink:0 }}
+            onTouchStart={(e) => e.currentTarget.style.color="#ff6b6b"}
+            onTouchEnd={(e) => e.currentTarget.style.color="rgba(255,100,100,0.6)"}
+          >✕</button>
+        </div>
+      </div>
+
+      {n > 0 && (
+        <div style={{ display:"grid", gridTemplateColumns:`38px repeat(${n}, 1fr) 28px`, gap:"5px", alignItems:"center", marginBottom:"8px" }}>
+          <div/>
+          {sets.map((_, i) => (
+            <div key={i} style={{ textAlign:"center", position:"relative" }}>
+              <div style={{ fontSize:"10px", color:"rgba(255,255,255,0.3)", fontFamily:"monospace" }}>S{i+1}</div>
+              {n > 1 && (
+                <button onClick={() => onRemoveSet(i)}
+                  style={{ ...btnBase, position:"absolute", top:"-1px", right:"-2px", width:"12px", height:"12px", fontSize:"9px", background:"rgba(255,80,80,0.25)", borderRadius:"50%", color:"rgba(255,120,120,0.9)", padding:0 }}
+                >×</button>
+              )}
+            </div>
+          ))}
+          <div/>
+          <div style={{ fontSize:"10px", color:"rgba(255,255,255,0.35)", fontFamily:"monospace" }}>KG</div>
+          {sets.map((s,i) => <SetInput key={i} value={s.kg} onChange={v => onChangeSet(i,"kg",v)} color={color}/>)}
+          <div/>
+          <div style={{ fontSize:"10px", color:"rgba(255,255,255,0.35)", fontFamily:"monospace" }}>REPS</div>
+          {sets.map((s,i) => <SetInput key={i} value={s.reps} onChange={v => onChangeSet(i,"reps",v)} color={color}/>)}
+          <div/>
+        </div>
+      )}
+
+      <button onClick={onAddSet}
+        style={{ ...btnBase, width:"100%", padding:"6px", background:"transparent", border:"1px dashed rgba(255,255,255,0.15)", borderRadius:"6px", fontSize:"12px", color:"rgba(255,255,255,0.35)", gap:"4px" }}
+        onTouchStart={(e) => { e.currentTarget.style.borderColor=color; e.currentTarget.style.color=color; }}
+        onTouchEnd={(e) => { e.currentTarget.style.borderColor="rgba(255,255,255,0.15)"; e.currentTarget.style.color="rgba(255,255,255,0.35)"; }}
+      >+ Añadir serie</button>
+    </div>
+  );
+}
+
+function AddExerciseForm({ color, onAdd, onCancel }) {
+  const [name, setName] = useState("");
+  const [reps, setReps] = useState("");
+  const inp = { width:"100%", background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.12)", borderRadius:"7px", color:"#fff", padding:"10px", fontSize:"14px", outline:"none", marginBottom:"8px", boxSizing:"border-box" };
+  return (
+    <div style={{ background:"rgba(255,255,255,0.05)", border:`1px dashed ${color}66`, borderRadius:"12px", padding:"14px", marginBottom:"10px" }}>
+      <div style={{ fontSize:"11px", color, fontFamily:"monospace", marginBottom:"10px", letterSpacing:"0.1em" }}>NUEVO EJERCICIO</div>
+      <input type="text" placeholder="Nombre del ejercicio" value={name} onChange={e=>setName(e.target.value)} style={inp}
+        onFocus={e=>e.target.style.borderColor=color} onBlur={e=>e.target.style.borderColor="rgba(255,255,255,0.12)"} autoFocus/>
+      <input type="text" placeholder="Rango reps (ej: 8–12)" value={reps} onChange={e=>setReps(e.target.value)} style={{...inp,fontFamily:"monospace"}}
+        onFocus={e=>e.target.style.borderColor=color} onBlur={e=>e.target.style.borderColor="rgba(255,255,255,0.12)"}/>
+      <div style={{ display:"flex", gap:"8px" }}>
+        <button onClick={()=>{ if(name.trim()) onAdd(name.trim(), reps.trim()||"—"); }}
+          style={{ ...btnBase, flex:1, padding:"10px", background:color, borderRadius:"7px", color:"#fff", fontSize:"13px", fontWeight:700, letterSpacing:"0.05em" }}>AÑADIR</button>
+        <button onClick={onCancel}
+          style={{ ...btnBase, padding:"10px 14px", background:"rgba(255,255,255,0.05)", borderRadius:"7px", color:"rgba(255,255,255,0.4)", fontSize:"13px" }}>Cancelar</button>
+      </div>
+    </div>
+  );
+}
+
+function RoutineView({ routineName, routines, onBack, onUpdateRoutine, onAddSession }) {
+  const routine = routines[routineName];
+  const [sets, setSets] = useState(() =>
+    Object.fromEntries(routine.exercises.map(ex => [ex.id, Array.from({length: routine.defaultSets[ex.id]||3}, ()=>({kg:"",reps:""}))]))
+  );
+  const [note, setNote] = useState("");
+  const [saved, setSaved] = useState(false);
+  const [showAdd, setShowAdd] = useState(false);
+
+  const total = Object.values(sets).reduce((a,s)=>a+s.length,0);
+  const filled = Object.values(sets).flat().filter(s=>s.kg&&s.reps).length;
+  const pct = total>0 ? Math.round(filled/total*100) : 0;
+
+  const chg = (id,i,f,v) => { setSets(p=>({...p,[id]:p[id].map((s,j)=>j===i?{...s,[f]:v}:s)})); setSaved(false); };
+  const addSet = id => { setSets(p=>({...p,[id]:[...p[id],{kg:"",reps:""}]})); setSaved(false); };
+  const rmSet = (id,i) => { setSets(p=>({...p,[id]:p[id].filter((_,j)=>j!==i)})); setSaved(false); };
+  const rmEx = id => { onUpdateRoutine(routineName,{...routine,exercises:routine.exercises.filter(e=>e.id!==id)}); setSets(p=>{const n={...p};delete n[id];return n;}); setSaved(false); };
+  const addEx = (name,repsRange) => {
+    const id=nextId++;
+    onUpdateRoutine(routineName,{...routine,exercises:[...routine.exercises,{id,name,repsRange}],defaultSets:{...routine.defaultSets,[id]:3}});
+    setSets(p=>({...p,[id]:[{kg:"",reps:""},{kg:"",reps:""},{kg:"",reps:""}]}));
+    setShowAdd(false); setSaved(false);
+  };
+  const save = () => {
+    const date = new Date().toLocaleDateString("es-ES",{day:"2-digit",month:"short",year:"numeric"});
+    onAddSession({routine:routineName,date,sets,exercises:routine.exercises,note,progress:pct});
+    setSaved(true);
+  };
+
+  return (
+    <div>
+      <button onClick={onBack} style={{...btnBase,background:"none",color:"rgba(255,255,255,0.5)",fontSize:"14px",padding:"0 0 20px 0",gap:"6px"}}>← Volver</button>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"20px"}}>
+        <div>
+          <div style={{fontSize:"11px",fontFamily:"monospace",color:routine.color,letterSpacing:"0.15em",marginBottom:"4px"}}>{routine.emoji} SESIÓN ACTIVA</div>
+          <h2 style={{fontFamily:"'Syne',sans-serif",fontSize:"28px",fontWeight:800,color:"#fff",margin:0}}>{routineName}</h2>
+        </div>
+        <div style={{textAlign:"right"}}>
+          <div style={{fontSize:"32px",fontWeight:800,color:routine.color}}>{pct}%</div>
+          <div style={{fontSize:"11px",color:"rgba(255,255,255,0.35)"}}>completado</div>
+        </div>
+      </div>
+      <div style={{height:"3px",background:"rgba(255,255,255,0.08)",borderRadius:"99px",marginBottom:"20px",overflow:"hidden"}}>
+        <div style={{height:"100%",width:`${pct}%`,background:routine.color,borderRadius:"99px",transition:"width 0.4s ease"}}/>
+      </div>
+
+      {routine.exercises.map(ex => (
+        <ExerciseCard key={ex.id} exercise={ex} color={routine.color} sets={sets[ex.id]||[]}
+          onChangeSet={(i,f,v)=>chg(ex.id,i,f,v)} onAddSet={()=>addSet(ex.id)}
+          onRemoveSet={i=>rmSet(ex.id,i)} onRemoveExercise={()=>rmEx(ex.id)}/>
+      ))}
+
+      {showAdd
+        ? <AddExerciseForm color={routine.color} onAdd={addEx} onCancel={()=>setShowAdd(false)}/>
+        : <button onClick={()=>setShowAdd(true)}
+            style={{...btnBase,width:"100%",padding:"13px",background:"transparent",border:"1px dashed rgba(255,255,255,0.15)",borderRadius:"10px",color:"rgba(255,255,255,0.35)",fontSize:"13px",gap:"6px",marginBottom:"16px"}}>
+            + Añadir ejercicio
+          </button>
+      }
+
+      <textarea placeholder="Notas de la sesión..." value={note} onChange={e=>setNote(e.target.value)}
+        style={{width:"100%",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"10px",color:"rgba(255,255,255,0.7)",padding:"12px",fontSize:"13px",resize:"none",outline:"none",minHeight:"60px",boxSizing:"border-box",marginBottom:"12px"}}/>
+
+      <button onClick={save}
+        style={{...btnBase,width:"100%",padding:"15px",background:saved?"rgba(255,255,255,0.08)":routine.color,borderRadius:"10px",color:"#fff",fontWeight:700,fontSize:"15px",letterSpacing:"0.05em",transition:"all 0.3s"}}>
+        {saved ? "✓ SESIÓN GUARDADA" : "GUARDAR SESIÓN"}
+      </button>
+    </div>
+  );
+}
+
+function HistoryView({ sessions, onBack, onDelete }) {
+  if (!sessions.length) return (
+    <div>
+      <button onClick={onBack} style={{...btnBase,background:"none",color:"rgba(255,255,255,0.5)",fontSize:"14px",padding:"0 0 20px 0"}}>← Volver</button>
+      <div style={{textAlign:"center",color:"rgba(255,255,255,0.3)",marginTop:"80px"}}>
+        <div style={{fontSize:"40px",marginBottom:"12px"}}>📭</div>
+        <div>Aún no hay sesiones registradas</div>
+      </div>
+    </div>
+  );
+  return (
+    <div>
+      <button onClick={onBack} style={{...btnBase,background:"none",color:"rgba(255,255,255,0.5)",fontSize:"14px",padding:"0 0 20px 0"}}>← Volver</button>
+      <h2 style={{fontWeight:800,color:"#fff",marginBottom:"20px",fontSize:"24px"}}>Historial</h2>
+      {[...sessions].reverse().map((s,idx)=>{
+        const ri = sessions.length-1-idx;
+        const info = INITIAL_ROUTINES[s.routine]||{color:"#888",emoji:"🏋️"};
+        return (
+          <div key={idx} style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderLeft:`3px solid ${info.color}`,borderRadius:"10px",padding:"16px",marginBottom:"12px"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"8px"}}>
+              <span style={{fontWeight:700,color:"#fff"}}>{info.emoji} {s.routine}</span>
+              <div style={{display:"flex",alignItems:"center",gap:"10px"}}>
+                <span style={{fontSize:"12px",color:"rgba(255,255,255,0.4)",fontFamily:"monospace"}}>{s.date}</span>
+                <button onClick={()=>onDelete(ri)} style={{...btnBase,background:"none",fontSize:"15px",color:"rgba(255,100,100,0.45)",width:"22px",height:"22px"}}>🗑</button>
+              </div>
+            </div>
+            <div style={{fontSize:"12px",color:info.color,fontFamily:"monospace",marginBottom:"8px"}}>{s.progress}% completado</div>
+            {s.note&&<div style={{marginBottom:"8px",fontSize:"12px",color:"rgba(255,255,255,0.4)",fontStyle:"italic"}}>{s.note}</div>}
+            {s.exercises?.map(ex=>{
+              const exSets=(s.sets[ex.id]||[]).filter(x=>x.kg&&x.reps);
+              if(!exSets.length) return null;
+              return <div key={ex.id} style={{fontSize:"11px",color:"rgba(255,255,255,0.35)",marginBottom:"3px",fontFamily:"monospace"}}>
+                <span style={{color:"rgba(255,255,255,0.6)"}}>{ex.name}:</span>{" "}{exSets.map(x=>`${x.kg}kg×${x.reps}`).join(" | ")}
+              </div>;
+            })}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function App() {
+  const [view, setView] = useState("home");
+  const [active, setActive] = useState(null);
+  const [sessions, setSessions] = useState([]);
+  const [routines, setRoutines] = useState(INITIAL_ROUTINES);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(()=>{
+    setSessions(ls("ppl:sessions",[]));
+    const saved = ls("ppl:routines", null);
+    if(saved) setRoutines(saved);
+    setLoading(false);
+  },[]);
+
+  const addSession = s => { const u=[...sessions,s]; setSessions(u); lsSave("ppl:sessions",u); };
+  const delSession = i => { const u=sessions.filter((_,j)=>j!==i); setSessions(u); lsSave("ppl:sessions",u); };
+  const updRoutine = (name,r) => { const u={...routines,[name]:r}; setRoutines(u); lsSave("ppl:routines",u); };
+
+  if(loading) return <div className="loading">CARGANDO...</div>;
+
+  return (
+    <div id="app">
+      {view==="home" && (
+        <div>
+          <div style={{marginBottom:"40px"}}>
+            <div style={{fontSize:"10px",letterSpacing:"0.2em",color:"rgba(255,255,255,0.3)",fontFamily:"monospace",marginBottom:"8px"}}>CICLO PPL · 4 SEMANAS</div>
+            <h1 style={{fontSize:"36px",fontWeight:800,color:"#fff",lineHeight:1}}>
+              Mi<br/>
+              <span style={{background:"linear-gradient(90deg,#FF6B35,#4ECDC4,#A855F7)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>Entrenamiento</span>
+            </h1>
+          </div>
+
+          <div style={{marginBottom:"12px"}}>
+            <div style={{fontSize:"10px",letterSpacing:"0.15em",color:"rgba(255,255,255,0.3)",marginBottom:"14px",fontFamily:"monospace"}}>RUTINAS</div>
+            {DAYS.map(day=>{
+              const r=routines[day];
+              const ds=sessions.filter(s=>s.routine===day);
+              return (
+                <button key={day} onClick={()=>{setActive(day);setView("routine");}}
+                  style={{...btnBase,width:"100%",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"14px",padding:"20px",marginBottom:"10px",textAlign:"left",justifyContent:"space-between"}}
+                  onTouchStart={e=>{e.currentTarget.style.background="rgba(255,255,255,0.08)";e.currentTarget.style.borderColor=r.color;}}
+                  onTouchEnd={e=>{e.currentTarget.style.background="rgba(255,255,255,0.04)";e.currentTarget.style.borderColor="rgba(255,255,255,0.08)";}}
+                >
+                  <div>
+                    <div style={{fontSize:"20px",fontWeight:800,color:"#fff",marginBottom:"4px"}}>{r.emoji} {day}</div>
+                    <div style={{fontSize:"11px",color:"rgba(255,255,255,0.35)",fontFamily:"monospace"}}>{r.exercises.length} ejercicios · {ds.length} sesiones</div>
+                  </div>
+                  <div style={{width:"32px",height:"32px",borderRadius:"50%",background:r.color,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:"16px",flexShrink:0}}>→</div>
+                </button>
+              );
+            })}
+          </div>
+
+          <div style={{marginTop:"32px"}}>
+            <div style={{fontSize:"10px",letterSpacing:"0.15em",color:"rgba(255,255,255,0.3)",marginBottom:"14px",fontFamily:"monospace"}}>RESUMEN</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"10px"}}>
+              {[
+                {label:"Sesiones",value:sessions.length,color:"#FF6B35"},
+                {label:"Push A",value:sessions.filter(s=>s.routine==="Push A").length,color:"#FF6B35"},
+                {label:"Pull A",value:sessions.filter(s=>s.routine==="Pull A").length,color:"#4ECDC4"},
+              ].map(st=>(
+                <div key={st.label} style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"10px",padding:"14px 12px",textAlign:"center"}}>
+                  <div style={{fontSize:"28px",fontWeight:800,color:st.color}}>{st.value}</div>
+                  <div style={{fontSize:"10px",color:"rgba(255,255,255,0.3)",fontFamily:"monospace",letterSpacing:"0.1em"}}>{st.label.toUpperCase()}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {sessions.length>0 && (
+            <button onClick={()=>setView("history")}
+              style={{...btnBase,width:"100%",marginTop:"16px",padding:"13px",background:"transparent",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"10px",color:"rgba(255,255,255,0.5)",fontSize:"13px",letterSpacing:"0.05em"}}>
+              VER HISTORIAL ({sessions.length})
+            </button>
+          )}
+        </div>
+      )}
+
+      {view==="routine"&&active&&(
+        <RoutineView routineName={active} routines={routines} onBack={()=>setView("home")} onUpdateRoutine={updRoutine} onAddSession={addSession}/>
+      )}
+      {view==="history"&&(
+        <HistoryView sessions={sessions} onBack={()=>setView("home")} onDelete={delSession}/>
+      )}
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById("app"));
+root.render(<App/>);
+
+  </script>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js');
+    }
+  </script>
+</body>
+</html>
