@@ -417,12 +417,7 @@ function App() {
   const [routines, setRoutines] = useState(INITIAL_ROUTINES);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
-  const [token, setToken] = useState(() => {
-    // Check URL hash first (most persistent), then localStorage
-    const hash = window.location.hash.slice(1);
-    if (hash && hash.startsWith("ghp_")) { lsSave("ppl:token", hash); return hash; }
-    return ls("ppl:token", null);
-  });
+  const [token, setToken] = useState("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");
   const [sha, setSha] = useState(null);
 
   useEffect(()=>{
@@ -476,7 +471,7 @@ function App() {
     await persist(sessions, u, sha);
   };
 
-  if (!token) return <SetupScreen onSave={t => { window.location.hash = t; setToken(t); setLoading(true); }} />;
+  // token hardcoded, setup screen not needed
   if (loading) return <div className="loading">CARGANDO...</div>;
 
   return (
