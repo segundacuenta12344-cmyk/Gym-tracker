@@ -159,8 +159,11 @@ function App() {
     })();
   },[token]);
 
-  const persist = async (newSessions, newRoutines, currentSha) => {
+  const persist = async (newSessions, newRoutines) => {
     setSyncing(true);
+    // Always fetch the latest sha before writing to avoid conflicts
+    const latest = await ghLoad(TOKEN);
+    const currentSha = latest ? latest.sha : null;
     const newSha = await ghSave(TOKEN, { sessions: newSessions, routines: newRoutines }, currentSha);
     if (newSha) setSha(newSha);
     setSyncing(false);
@@ -168,15 +171,15 @@ function App() {
 
   const addSession = async s => {
     const u=[...sessions,s]; setSessions(u);
-    await persist(u, routines, sha);
+    await persist(u, routines);
   };
   const delSession = async i => {
     const u=sessions.filter((_,j)=>j!==i); setSessions(u);
-    await persist(u, routines, sha);
+    await persist(u, routines);
   };
   const updRoutine = async (name,r) => {
     const u={...routines,[name]:r}; setRoutines(u);
-    await persist(sessions, u, sha);
+    await persist(sessions, u);
   };
 
   if (loading) return <div className="loading">CARGANDO...</div>;
