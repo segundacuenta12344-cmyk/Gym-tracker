@@ -1,8 +1,9 @@
-const CACHE = 'ppl-v1';
+const CACHE = 'ppl-v2';
 const ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
+  '/Gym-tracker/',
+  '/Gym-tracker/index.html',
+  '/Gym-tracker/manifest.json',
+  '/Gym-tracker/icon.png',
   'https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&display=swap',
   'https://unpkg.com/react@18/umd/react.production.min.js',
   'https://unpkg.com/react-dom@18/umd/react-dom.production.min.js',
