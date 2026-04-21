@@ -116,299 +116,7 @@ async function ghSave(token, data, sha) {
   } catch { return null; }
 }
 
-function SetupScreen({ onSave }) {
-  const [token, setToken] = React.useState("");
-  const [testing, setTesting] = React.useState(false);
-  const [error, setError] = React.useState("");
 
-  const handleConnect = async () => {
-    if (!token.trim()) return;
-    setTesting(true); setError("");
-    const result = await ghLoad(token.trim());
-    if (result === null) {
-      const sha = await ghSave(token.trim(), { sessions: [], routines: null }, null);
-      if (!sha) { setError("Token inválido o sin permisos. Revisa que tiene acceso 'repo'."); setTesting(false); return; }
-    }
-    lsSave("ppl:token", token.trim());
-    onSave(token.trim());
-    setTesting(false);
-  };
-
-  return (
-    <div style={{ minHeight:"100vh", display:"flex", flexDirection:"column", justifyContent:"center", padding:"32px 24px" }}>
-      <div style={{ fontSize:"10px", letterSpacing:"0.2em", color:"rgba(255,255,255,0.3)", fontFamily:"monospace", marginBottom:"12px" }}>CONFIGURACIÓN</div>
-      <h1 style={{ fontSize:"30px", fontWeight:800, color:"#fff", lineHeight:1.1, marginBottom:"12px" }}>Conectar<br/><span style={{ background:"linear-gradient(90deg,#FF6B35,#4ECDC4)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>GitHub</span></h1>
-      <p style={{ fontSize:"13px", color:"rgba(255,255,255,0.4)", marginBottom:"32px", lineHeight:1.6 }}>Introduce tu Personal Access Token. Se queda solo en tu dispositivo, nunca en el código.</p>
-      <div style={{ fontSize:"11px", color:"rgba(255,255,255,0.3)", fontFamily:"monospace", marginBottom:"8px", letterSpacing:"0.1em" }}>PERSONAL ACCESS TOKEN</div>
-      <input type="password" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" value={token}
-        onChange={e => { setToken(e.target.value); setError(""); }}
-        style={{ width:"100%", background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.15)", borderRadius:"10px", color:"#fff", padding:"14px", fontSize:"14px", outline:"none", marginBottom:"12px", boxSizing:"border-box", fontFamily:"monospace" }}
-      />
-      {error && <div style={{ fontSize:"12px", color:"#ff6b6b", marginBottom:"12px", fontFamily:"monospace" }}>{error}</div>}
-      <button onClick={handleConnect} disabled={testing || !token.trim()}
-        style={{ ...btnBase, width:"100%", padding:"15px", background: testing ? "rgba(255,255,255,0.08)" : "#FF6B35", borderRadius:"10px", color:"#fff", fontWeight:700, fontSize:"14px", letterSpacing:"0.05em", opacity: !token.trim() ? 0.4 : 1 }}>
-        {testing ? "CONECTANDO..." : "CONECTAR"}
-      </button>
-      <div style={{ marginTop:"28px", padding:"16px", background:"rgba(255,255,255,0.03)", borderRadius:"10px", border:"1px solid rgba(255,255,255,0.06)" }}>
-        <div style={{ fontSize:"11px", color:"rgba(255,255,255,0.3)", fontFamily:"monospace", marginBottom:"8px", letterSpacing:"0.08em" }}>CÓMO OBTENER EL TOKEN</div>
-        <div style={{ fontSize:"12px", color:"rgba(255,255,255,0.4)", lineHeight:1.8 }}>
-          1. github.com → avatar → Settings<br/>
-          2. Developer settings → Personal access tokens → Tokens (classic)<br/>
-          3. Generate new token (classic)<br/>
-          4. Permiso ✅ repo · Expiración: No expiration<br/>
-          5. Copia el token y pégalo arriba
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function SetInput({ value, onChange, color }) {
-  return (
-    <input type="number" min="0" step="0.5" placeholder="—" value={value}
-      onChange={(e) => onChange(e.target.value)}
-      style={{ width:"100%", background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.12)", borderRadius:"6px", color:"#fff", padding:"7px 4px", fontSize:"14px", textAlign:"center", outline:"none", transition:"border-color 0.2s" }}
-      onFocus={(e) => (e.target.style.borderColor = color)}
-      onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.12)")}
-    />
-  );
-}
-
-function ExerciseCard({ exercise, color, sets, onChangeSet, onAddSet, onRemoveSet, onRemoveExercise }) {
-  const allDone = sets.length > 0 && sets.every(s => s.kg && s.reps);
-  const n = sets.length;
-  return (
-    <div style={{ background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:"12px", padding:"14px", marginBottom:"10px" }}>
-      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"10px" }}>
-        <div style={{ flex:1, minWidth:0 }}>
-          <span style={{ fontWeight:700, fontSize:"14px", color:"#fff" }}>{exercise.name}</span>
-          <span style={{ marginLeft:"8px", fontSize:"11px", color:"rgba(255,255,255,0.35)", fontFamily:"monospace" }}>{n}× · {exercise.repsRange}</span>
-        </div>
-        <div style={{ display:"flex", gap:"5px", alignItems:"center" }}>
-          {allDone && <span style={{ color, fontSize:"14px", marginRight:"4px" }}>✓</span>}
-          <button onClick={onRemoveExercise}
-            style={{ ...btnBase, background:"rgba(255,255,255,0.05)", borderRadius:"6px", width:"28px", height:"28px", fontSize:"13px", color:"rgba(255,100,100,0.6)", flexShrink:0 }}
-            onTouchStart={(e) => e.currentTarget.style.color="#ff6b6b"}
-            onTouchEnd={(e) => e.currentTarget.style.color="rgba(255,100,100,0.6)"}
-          >✕</button>
-        </div>
-      </div>
-
-      {n > 0 && (
-        <div style={{ display:"grid", gridTemplateColumns:`38px repeat(${n}, 1fr) 28px`, gap:"5px", alignItems:"center", marginBottom:"8px" }}>
-          <div/>
-          {sets.map((_, i) => (
-            <div key={i} style={{ textAlign:"center", position:"relative" }}>
-              <div style={{ fontSize:"10px", color:"rgba(255,255,255,0.3)", fontFamily:"monospace" }}>S{i+1}</div>
-              {n > 1 && (
-                <button onClick={() => onRemoveSet(i)}
-                  style={{ ...btnBase, position:"absolute", top:"-1px", right:"-2px", width:"12px", height:"12px", fontSize:"9px", background:"rgba(255,80,80,0.25)", borderRadius:"50%", color:"rgba(255,120,120,0.9)", padding:0 }}
-                >×</button>
-              )}
-            </div>
-          ))}
-          <div/>
-          <div style={{ fontSize:"10px", color:"rgba(255,255,255,0.35)", fontFamily:"monospace" }}>KG</div>
-          {sets.map((s,i) => <SetInput key={i} value={s.kg} onChange={v => onChangeSet(i,"kg",v)} color={color}/>)}
-          <div/>
-          <div style={{ fontSize:"10px", color:"rgba(255,255,255,0.35)", fontFamily:"monospace" }}>REPS</div>
-          {sets.map((s,i) => <SetInput key={i} value={s.reps} onChange={v => onChangeSet(i,"reps",v)} color={color}/>)}
-          <div/>
-        </div>
-      )}
-
-      <button onClick={onAddSet}
-        style={{ ...btnBase, width:"100%", padding:"6px", background:"transparent", border:"1px dashed rgba(255,255,255,0.15)", borderRadius:"6px", fontSize:"12px", color:"rgba(255,255,255,0.35)", gap:"4px" }}
-        onTouchStart={(e) => { e.currentTarget.style.borderColor=color; e.currentTarget.style.color=color; }}
-        onTouchEnd={(e) => { e.currentTarget.style.borderColor="rgba(255,255,255,0.15)"; e.currentTarget.style.color="rgba(255,255,255,0.35)"; }}
-      >+ Añadir serie</button>
-    </div>
-  );
-}
-
-function AddExerciseForm({ color, onAdd, onCancel }) {
-  const [name, setName] = useState("");
-  const [reps, setReps] = useState("");
-  const inp = { width:"100%", background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.12)", borderRadius:"7px", color:"#fff", padding:"10px", fontSize:"14px", outline:"none", marginBottom:"8px", boxSizing:"border-box" };
-  return (
-    <div style={{ background:"rgba(255,255,255,0.05)", border:`1px dashed ${color}66`, borderRadius:"12px", padding:"14px", marginBottom:"10px" }}>
-      <div style={{ fontSize:"11px", color, fontFamily:"monospace", marginBottom:"10px", letterSpacing:"0.1em" }}>NUEVO EJERCICIO</div>
-      <input type="text" placeholder="Nombre del ejercicio" value={name} onChange={e=>setName(e.target.value)} style={inp}
-        onFocus={e=>e.target.style.borderColor=color} onBlur={e=>e.target.style.borderColor="rgba(255,255,255,0.12)"} autoFocus/>
-      <input type="text" placeholder="Rango reps (ej: 8–12)" value={reps} onChange={e=>setReps(e.target.value)} style={{...inp,fontFamily:"monospace"}}
-        onFocus={e=>e.target.style.borderColor=color} onBlur={e=>e.target.style.borderColor="rgba(255,255,255,0.12)"}/>
-      <div style={{ display:"flex", gap:"8px" }}>
-        <button onClick={()=>{ if(name.trim()) onAdd(name.trim(), reps.trim()||"—"); }}
-          style={{ ...btnBase, flex:1, padding:"10px", background:color, borderRadius:"7px", color:"#fff", fontSize:"13px", fontWeight:700, letterSpacing:"0.05em" }}>AÑADIR</button>
-        <button onClick={onCancel}
-          style={{ ...btnBase, padding:"10px 14px", background:"rgba(255,255,255,0.05)", borderRadius:"7px", color:"rgba(255,255,255,0.4)", fontSize:"13px" }}>Cancelar</button>
-      </div>
-    </div>
-  );
-}
-
-function RoutineView({ routineName, routines, onBack, onUpdateRoutine, onAddSession, lastSession }) {
-  const routine = routines[routineName];
-  const [sets, setSets] = useState(() =>
-    Object.fromEntries(routine.exercises.map(ex => {
-      const prev = lastSession?.sets?.[ex.id];
-      const numSets = prev?.length || routine.defaultSets[ex.id] || 3;
-      return [ex.id, Array.from({length: numSets}, (_,i) => ({
-        kg: prev?.[i]?.kg ?? "",
-        reps: prev?.[i]?.reps ?? "",
-      }))];
-    }))
-  );
-  const [note, setNote] = useState("");
-  const [saved, setSaved] = useState(false);
-  const [showAdd, setShowAdd] = useState(false);
-
-  const total = Object.values(sets).reduce((a,s)=>a+s.length,0);
-  const filled = Object.values(sets).flat().filter(s=>s.kg&&s.reps).length;
-  const pct = total>0 ? Math.round(filled/total*100) : 0;
-
-  const chg = (id,i,f,v) => { setSets(p=>({...p,[id]:p[id].map((s,j)=>j===i?{...s,[f]:v}:s)})); setSaved(false); };
-  const addSet = id => { setSets(p=>({...p,[id]:[...p[id],{kg:"",reps:""}]})); setSaved(false); };
-  const rmSet = (id,i) => { setSets(p=>({...p,[id]:p[id].filter((_,j)=>j!==i)})); setSaved(false); };
-  const rmEx = id => { onUpdateRoutine(routineName,{...routine,exercises:routine.exercises.filter(e=>e.id!==id)}); setSets(p=>{const n={...p};delete n[id];return n;}); setSaved(false); };
-  const addEx = (name,repsRange) => {
-    const id=nextId++;
-    onUpdateRoutine(routineName,{...routine,exercises:[...routine.exercises,{id,name,repsRange}],defaultSets:{...routine.defaultSets,[id]:3}});
-    setSets(p=>({...p,[id]:[{kg:"",reps:""},{kg:"",reps:""},{kg:"",reps:""}]}));
-    setShowAdd(false); setSaved(false);
-  };
-  const save = () => {
-    const date = new Date().toLocaleDateString("es-ES",{day:"2-digit",month:"short",year:"numeric"});
-    onAddSession({routine:routineName,date,sets,exercises:routine.exercises,note,progress:pct});
-    setSaved(true);
-  };
-
-  return (
-    <div>
-      <button onClick={onBack} style={{...btnBase,background:"none",color:"rgba(255,255,255,0.5)",fontSize:"14px",padding:"0 0 20px 0",gap:"6px"}}>← Volver</button>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"20px"}}>
-        <div>
-          <div style={{fontSize:"11px",fontFamily:"monospace",color:routine.color,letterSpacing:"0.15em",marginBottom:"4px"}}>{routine.emoji} SESIÓN ACTIVA</div>
-          <h2 style={{fontFamily:"'Syne',sans-serif",fontSize:"28px",fontWeight:800,color:"#fff",margin:0}}>{routineName}</h2>
-        </div>
-        <div style={{textAlign:"right"}}>
-          <div style={{fontSize:"32px",fontWeight:800,color:routine.color}}>{pct}%</div>
-          <div style={{fontSize:"11px",color:"rgba(255,255,255,0.35)"}}>completado</div>
-        </div>
-      </div>
-      <div style={{height:"3px",background:"rgba(255,255,255,0.08)",borderRadius:"99px",marginBottom:"20px",overflow:"hidden"}}>
-        <div style={{height:"100%",width:`${pct}%`,background:routine.color,borderRadius:"99px",transition:"width 0.4s ease"}}/>
-      </div>
-
-      {routine.exercises.map(ex => (
-        <ExerciseCard key={ex.id} exercise={ex} color={routine.color} sets={sets[ex.id]||[]}
-          onChangeSet={(i,f,v)=>chg(ex.id,i,f,v)} onAddSet={()=>addSet(ex.id)}
-          onRemoveSet={i=>rmSet(ex.id,i)} onRemoveExercise={()=>rmEx(ex.id)}/>
-      ))}
-
-      {showAdd
-        ? <AddExerciseForm color={routine.color} onAdd={addEx} onCancel={()=>setShowAdd(false)}/>
-        : <button onClick={()=>setShowAdd(true)}
-            style={{...btnBase,width:"100%",padding:"13px",background:"transparent",border:"1px dashed rgba(255,255,255,0.15)",borderRadius:"10px",color:"rgba(255,255,255,0.35)",fontSize:"13px",gap:"6px",marginBottom:"16px"}}>
-            + Añadir ejercicio
-          </button>
-      }
-
-      <textarea placeholder="Notas de la sesión..." value={note} onChange={e=>setNote(e.target.value)}
-        style={{width:"100%",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"10px",color:"rgba(255,255,255,0.7)",padding:"12px",fontSize:"13px",resize:"none",outline:"none",minHeight:"60px",boxSizing:"border-box",marginBottom:"12px"}}/>
-
-      <button onClick={save}
-        style={{...btnBase,width:"100%",padding:"15px",background:saved?"rgba(255,255,255,0.08)":routine.color,borderRadius:"10px",color:"#fff",fontWeight:700,fontSize:"15px",letterSpacing:"0.05em",transition:"all 0.3s"}}>
-        {saved ? "✓ SESIÓN GUARDADA" : "GUARDAR SESIÓN"}
-      </button>
-    </div>
-  );
-}
-
-function HistoryView({ sessions, onBack, onDelete }) {
-  if (!sessions.length) return (
-    <div>
-      <button onClick={onBack} style={{...btnBase,background:"none",color:"rgba(255,255,255,0.5)",fontSize:"14px",padding:"0 0 20px 0"}}>← Volver</button>
-      <div style={{textAlign:"center",color:"rgba(255,255,255,0.3)",marginTop:"80px"}}>
-        <div style={{fontSize:"40px",marginBottom:"12px"}}>📭</div>
-        <div>Aún no hay sesiones registradas</div>
-      </div>
-    </div>
-  );
-  return (
-    <div>
-      <button onClick={onBack} style={{...btnBase,background:"none",color:"rgba(255,255,255,0.5)",fontSize:"14px",padding:"0 0 20px 0"}}>← Volver</button>
-      <h2 style={{fontWeight:800,color:"#fff",marginBottom:"20px",fontSize:"24px"}}>Historial</h2>
-      {[...sessions].reverse().map((s,idx)=>{
-        const ri = sessions.length-1-idx;
-        const info = INITIAL_ROUTINES[s.routine]||{color:"#888",emoji:"🏋️"};
-        return (
-          <div key={idx} style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderLeft:`3px solid ${info.color}`,borderRadius:"10px",padding:"16px",marginBottom:"12px"}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"8px"}}>
-              <span style={{fontWeight:700,color:"#fff"}}>{info.emoji} {s.routine}</span>
-              <div style={{display:"flex",alignItems:"center",gap:"10px"}}>
-                <span style={{fontSize:"12px",color:"rgba(255,255,255,0.4)",fontFamily:"monospace"}}>{s.date}</span>
-                <button onClick={()=>onDelete(ri)} style={{...btnBase,background:"none",fontSize:"15px",color:"rgba(255,100,100,0.45)",width:"22px",height:"22px"}}>🗑</button>
-              </div>
-            </div>
-            <div style={{fontSize:"12px",color:info.color,fontFamily:"monospace",marginBottom:"8px"}}>{s.progress}% completado</div>
-            {s.note&&<div style={{marginBottom:"8px",fontSize:"12px",color:"rgba(255,255,255,0.4)",fontStyle:"italic"}}>{s.note}</div>}
-            {s.exercises?.map(ex=>{
-              const exSets=(s.sets[ex.id]||[]).filter(x=>x.kg&&x.reps);
-              if(!exSets.length) return null;
-              return <div key={ex.id} style={{fontSize:"11px",color:"rgba(255,255,255,0.35)",marginBottom:"3px",fontFamily:"monospace"}}>
-                <span style={{color:"rgba(255,255,255,0.6)"}}>{ex.name}:</span>{" "}{exSets.map(x=>`${x.kg}kg×${x.reps}`).join(" | ")}
-              </div>;
-            })}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function ConfigView({ token, onDisconnect, onBack }) {
-  const [copied, setCopied] = React.useState(false);
-  const url = `https://segundacuenta12344-cmyk.github.io/Gym-tracker/#${token}`;
-
-  const copyUrl = () => {
-    navigator.clipboard.writeText(url).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
-  };
-
-  return (
-    <div>
-      <button onClick={onBack} style={{...btnBase,background:"none",color:"rgba(255,255,255,0.5)",fontSize:"14px",padding:"0 0 24px 0",gap:"6px"}}>← Volver</button>
-      <div style={{fontSize:"10px",letterSpacing:"0.2em",color:"rgba(255,255,255,0.3)",fontFamily:"monospace",marginBottom:"8px"}}>CONFIGURACIÓN</div>
-      <h2 style={{fontSize:"26px",fontWeight:800,color:"#fff",marginBottom:"28px"}}>Cuenta GitHub</h2>
-
-      <div style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"12px",padding:"20px",marginBottom:"16px"}}>
-        <div style={{fontSize:"11px",color:"rgba(255,255,255,0.3)",fontFamily:"monospace",letterSpacing:"0.1em",marginBottom:"10px"}}>TU ENLACE PERMANENTE</div>
-        <p style={{fontSize:"12px",color:"rgba(255,255,255,0.4)",lineHeight:1.6,marginBottom:"14px"}}>
-          Guarda este enlace en tus marcadores o notas. Si alguna vez pierdes el acceso, ábrelo y la app se conectará automáticamente sin pedir el token.
-        </p>
-        <div style={{background:"rgba(255,255,255,0.06)",borderRadius:"8px",padding:"10px 12px",fontFamily:"monospace",fontSize:"11px",color:"rgba(255,255,255,0.5)",wordBreak:"break-all",marginBottom:"12px"}}>
-          {url}
-        </div>
-        <button onClick={copyUrl}
-          style={{...btnBase,width:"100%",padding:"11px",background:copied?"rgba(78,205,196,0.2)":"rgba(255,255,255,0.08)",border:`1px solid ${copied?"#4ECDC4":"rgba(255,255,255,0.1)"}`,borderRadius:"8px",color:copied?"#4ECDC4":"rgba(255,255,255,0.6)",fontSize:"13px",fontWeight:700,letterSpacing:"0.05em",transition:"all 0.2s"}}>
-          {copied ? "✓ COPIADO" : "COPIAR ENLACE"}
-        </button>
-      </div>
-
-      <div style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"12px",padding:"20px",marginBottom:"16px"}}>
-        <div style={{fontSize:"11px",color:"rgba(255,255,255,0.3)",fontFamily:"monospace",letterSpacing:"0.1em",marginBottom:"10px"}}>TOKEN ACTIVO</div>
-        <div style={{fontFamily:"monospace",fontSize:"12px",color:"rgba(255,255,255,0.3)",wordBreak:"break-all"}}>
-          {token.slice(0,8)}{"•".repeat(token.length - 12)}{token.slice(-4)}
-        </div>
-      </div>
-
-      <button onClick={onDisconnect}
-        style={{...btnBase,width:"100%",padding:"13px",background:"transparent",border:"1px solid rgba(255,80,80,0.3)",borderRadius:"10px",color:"rgba(255,100,100,0.6)",fontSize:"13px",letterSpacing:"0.05em"}}>
-        Desconectar cuenta
-      </button>
-    </div>
-  );
-}
 
 function App() {
   const [view, setView] = useState("home");
@@ -417,13 +125,13 @@ function App() {
   const [routines, setRoutines] = useState(INITIAL_ROUTINES);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
-  const [token, setToken] = useState("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");
+  const TOKEN = "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";
   const [sha, setSha] = useState(null);
 
   useEffect(()=>{
     if (!token) { setLoading(false); return; }
     (async () => {
-      const result = await ghLoad(token);
+      const result = await ghLoad(TOKEN);
       if (result) {
         const { data, sha: fileSha } = result;
         if (data.sessions) setSessions(data.sessions);
@@ -453,7 +161,7 @@ function App() {
 
   const persist = async (newSessions, newRoutines, currentSha) => {
     setSyncing(true);
-    const newSha = await ghSave(token, { sessions: newSessions, routines: newRoutines }, currentSha);
+    const newSha = await ghSave(TOKEN, { sessions: newSessions, routines: newRoutines }, currentSha);
     if (newSha) setSha(newSha);
     setSyncing(false);
   };
@@ -471,7 +179,6 @@ function App() {
     await persist(sessions, u, sha);
   };
 
-  // token hardcoded, setup screen not needed
   if (loading) return <div className="loading">CARGANDO...</div>;
 
   return (
@@ -486,8 +193,7 @@ function App() {
                   ? <div style={{fontSize:"10px",color:"#4ECDC4",fontFamily:"monospace",letterSpacing:"0.08em"}}>GUARDANDO...</div>
                   : <div style={{fontSize:"10px",color:"rgba(255,255,255,0.2)",fontFamily:"monospace",letterSpacing:"0.08em"}}>✓ GitHub</div>
                 }
-                <button onClick={()=>setView("config")}
-                  style={{...btnBase,background:"none",fontSize:"14px",color:"rgba(255,255,255,0.2)",padding:"2px 4px"}} title="Configuración">⚙</button>
+
               </div>
             </div>
             <h1 style={{fontSize:"36px",fontWeight:800,color:"#fff",lineHeight:1}}>
@@ -549,9 +255,7 @@ function App() {
       {view==="history"&&(
         <HistoryView sessions={sessions} onBack={()=>setView("home")} onDelete={delSession}/>
       )}
-      {view==="config"&&(
-        <ConfigView token={token} onDisconnect={()=>{ lsSave("ppl:token",null); localStorage.removeItem("ppl:token"); window.location.hash=""; setToken(null); }} onBack={()=>setView("home")}/>
-      )}
+
     </div>
   );
 }
