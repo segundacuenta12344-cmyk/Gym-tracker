@@ -89,6 +89,77 @@ function lsSave(key, val) {
   try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
 }
 
+// --- GitHub storage ---
+const GH_REPO = "segundacuenta12344-cmyk/Gym-tracker";
+const GH_FILE = "data.json";
+const GH_API  = `https://api.github.com/repos/${GH_REPO}/contents/${GH_FILE}`;
+
+async function ghLoad(token) {
+  try {
+    const r = await fetch(GH_API, { headers: { Authorization: `token ${token}`, Accept: "application/vnd.github.v3+json" } });
+    if (!r.ok) return null;
+    const json = await r.json();
+    return { data: JSON.parse(atob(json.content)), sha: json.sha };
+  } catch { return null; }
+}
+
+async function ghSave(token, data, sha) {
+  const body = { message: "update data", content: btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2)))), ...(sha ? { sha } : {}) };
+  try {
+    const r = await fetch(GH_API, { method: "PUT", headers: { Authorization: `token ${token}`, Accept: "application/vnd.github.v3+json", "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    if (!r.ok) return null;
+    const json = await r.json();
+    return json.content.sha;
+  } catch { return null; }
+}
+
+function SetupScreen({ onSave }) {
+  const [token, setToken] = React.useState("");
+  const [testing, setTesting] = React.useState(false);
+  const [error, setError] = React.useState("");
+
+  const handleConnect = async () => {
+    if (!token.trim()) return;
+    setTesting(true); setError("");
+    const result = await ghLoad(token.trim());
+    if (result === null) {
+      const sha = await ghSave(token.trim(), { sessions: [], routines: null }, null);
+      if (!sha) { setError("Token inválido o sin permisos. Revisa que tiene acceso 'repo'."); setTesting(false); return; }
+    }
+    lsSave("ppl:token", token.trim());
+    onSave(token.trim());
+    setTesting(false);
+  };
+
+  return (
+    <div style={{ minHeight:"100vh", display:"flex", flexDirection:"column", justifyContent:"center", padding:"32px 24px" }}>
+      <div style={{ fontSize:"10px", letterSpacing:"0.2em", color:"rgba(255,255,255,0.3)", fontFamily:"monospace", marginBottom:"12px" }}>CONFIGURACIÓN</div>
+      <h1 style={{ fontSize:"30px", fontWeight:800, color:"#fff", lineHeight:1.1, marginBottom:"12px" }}>Conectar<br/><span style={{ background:"linear-gradient(90deg,#FF6B35,#4ECDC4)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>GitHub</span></h1>
+      <p style={{ fontSize:"13px", color:"rgba(255,255,255,0.4)", marginBottom:"32px", lineHeight:1.6 }}>Introduce tu Personal Access Token. Se queda solo en tu dispositivo, nunca en el código.</p>
+      <div style={{ fontSize:"11px", color:"rgba(255,255,255,0.3)", fontFamily:"monospace", marginBottom:"8px", letterSpacing:"0.1em" }}>PERSONAL ACCESS TOKEN</div>
+      <input type="password" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" value={token}
+        onChange={e => { setToken(e.target.value); setError(""); }}
+        style={{ width:"100%", background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.15)", borderRadius:"10px", color:"#fff", padding:"14px", fontSize:"14px", outline:"none", marginBottom:"12px", boxSizing:"border-box", fontFamily:"monospace" }}
+      />
+      {error && <div style={{ fontSize:"12px", color:"#ff6b6b", marginBottom:"12px", fontFamily:"monospace" }}>{error}</div>}
+      <button onClick={handleConnect} disabled={testing || !token.trim()}
+        style={{ ...btnBase, width:"100%", padding:"15px", background: testing ? "rgba(255,255,255,0.08)" : "#FF6B35", borderRadius:"10px", color:"#fff", fontWeight:700, fontSize:"14px", letterSpacing:"0.05em", opacity: !token.trim() ? 0.4 : 1 }}>
+        {testing ? "CONECTANDO..." : "CONECTAR"}
+      </button>
+      <div style={{ marginTop:"28px", padding:"16px", background:"rgba(255,255,255,0.03)", borderRadius:"10px", border:"1px solid rgba(255,255,255,0.06)" }}>
+        <div style={{ fontSize:"11px", color:"rgba(255,255,255,0.3)", fontFamily:"monospace", marginBottom:"8px", letterSpacing:"0.08em" }}>CÓMO OBTENER EL TOKEN</div>
+        <div style={{ fontSize:"12px", color:"rgba(255,255,255,0.4)", lineHeight:1.8 }}>
+          1. github.com → avatar → Settings<br/>
+          2. Developer settings → Personal access tokens → Tokens (classic)<br/>
+          3. Generate new token (classic)<br/>
+          4. Permiso ✅ repo · Expiración: No expiration<br/>
+          5. Copia el token y pégalo arriba
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function SetInput({ value, onChange, color }) {
   return (
     <input type="number" min="0" step="0.5" placeholder="—" value={value}
@@ -299,26 +370,68 @@ function App() {
   const [sessions, setSessions] = useState([]);
   const [routines, setRoutines] = useState(INITIAL_ROUTINES);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
+  const [token, setToken] = useState(() => ls("ppl:token", null));
+  const [sha, setSha] = useState(null);
 
   useEffect(()=>{
-    setSessions(ls("ppl:sessions",[]));
-    const saved = ls("ppl:routines", null);
-    if(saved) setRoutines(saved);
-    setLoading(false);
-  },[]);
+    if (!token) { setLoading(false); return; }
+    (async () => {
+      const result = await ghLoad(token);
+      if (result) {
+        const { data, sha: fileSha } = result;
+        if (data.sessions) setSessions(data.sessions);
+        if (data.routines) setRoutines(data.routines);
+        setSha(fileSha);
+      } else {
+        // fallback to localStorage
+        setSessions(ls("ppl:sessions",[]));
+        const saved = ls("ppl:routines", null);
+        if(saved) setRoutines(saved);
+      }
+      setLoading(false);
+    })();
+  },[token]);
 
-  const addSession = s => { const u=[...sessions,s]; setSessions(u); lsSave("ppl:sessions",u); };
-  const delSession = i => { const u=sessions.filter((_,j)=>j!==i); setSessions(u); lsSave("ppl:sessions",u); };
-  const updRoutine = (name,r) => { const u={...routines,[name]:r}; setRoutines(u); lsSave("ppl:routines",u); };
+  const persist = async (newSessions, newRoutines, currentSha) => {
+    setSyncing(true);
+    const newSha = await ghSave(token, { sessions: newSessions, routines: newRoutines }, currentSha);
+    if (newSha) setSha(newSha);
+    setSyncing(false);
+  };
 
-  if(loading) return <div className="loading">CARGANDO...</div>;
+  const addSession = async s => {
+    const u=[...sessions,s]; setSessions(u);
+    await persist(u, routines, sha);
+  };
+  const delSession = async i => {
+    const u=sessions.filter((_,j)=>j!==i); setSessions(u);
+    await persist(u, routines, sha);
+  };
+  const updRoutine = async (name,r) => {
+    const u={...routines,[name]:r}; setRoutines(u);
+    await persist(sessions, u, sha);
+  };
+
+  if (!token) return <SetupScreen onSave={t => { setToken(t); setLoading(true); }} />;
+  if (loading) return <div className="loading">CARGANDO...</div>;
 
   return (
     <div id="app">
       {view==="home" && (
         <div>
           <div style={{marginBottom:"40px"}}>
-            <div style={{fontSize:"10px",letterSpacing:"0.2em",color:"rgba(255,255,255,0.3)",fontFamily:"monospace",marginBottom:"8px"}}>CICLO PPL · 4 SEMANAS</div>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"8px"}}>
+              <div style={{fontSize:"10px",letterSpacing:"0.2em",color:"rgba(255,255,255,0.3)",fontFamily:"monospace"}}>CICLO PPL · 4 SEMANAS</div>
+              <div style={{display:"flex",alignItems:"center",gap:"8px"}}>
+                {syncing
+                  ? <div style={{fontSize:"10px",color:"#4ECDC4",fontFamily:"monospace",letterSpacing:"0.08em"}}>GUARDANDO...</div>
+                  : <div style={{fontSize:"10px",color:"rgba(255,255,255,0.2)",fontFamily:"monospace",letterSpacing:"0.08em"}}>✓ GitHub</div>
+                }
+                <button onClick={()=>{ lsSave("ppl:token",null); localStorage.removeItem("ppl:token"); setToken(null); }}
+                  style={{...btnBase,background:"none",fontSize:"11px",color:"rgba(255,255,255,0.2)",padding:"2px 4px"}} title="Desconectar">⚙</button>
+              </div>
+            </div>
             <h1 style={{fontSize:"36px",fontWeight:800,color:"#fff",lineHeight:1}}>
               Mi<br/>
               <span style={{background:"linear-gradient(90deg,#FF6B35,#4ECDC4,#A855F7)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>Entrenamiento</span>
