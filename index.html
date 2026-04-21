@@ -99,12 +99,15 @@ async function ghLoad(token) {
     const r = await fetch(GH_API, { headers: { Authorization: `token ${token}`, Accept: "application/vnd.github.v3+json" } });
     if (!r.ok) return null;
     const json = await r.json();
-    return { data: JSON.parse(atob(json.content)), sha: json.sha };
+    const decoded = decodeURIComponent(escape(atob(json.content.replace(/\s/g, ""))));
+    return { data: JSON.parse(decoded), sha: json.sha };
   } catch { return null; }
 }
 
 async function ghSave(token, data, sha) {
-  const body = { message: "update data", content: btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2)))), ...(sha ? { sha } : {}) };
+  const str = JSON.stringify(data, null, 2);
+  const encoded = btoa(unescape(encodeURIComponent(str)));
+  const body = { message: "update data", content: encoded, ...(sha ? { sha } : {}) };
   try {
     const r = await fetch(GH_API, { method: "PUT", headers: { Authorization: `token ${token}`, Accept: "application/vnd.github.v3+json", "Content-Type": "application/json" }, body: JSON.stringify(body) });
     if (!r.ok) return null;
@@ -429,7 +432,19 @@ function App() {
       if (result) {
         const { data, sha: fileSha } = result;
         if (data.sessions) setSessions(data.sessions);
-        if (data.routines) setRoutines(data.routines);
+        if (data.routines) {
+          // Merge saved exercises with INITIAL_ROUTINES to preserve emojis & colors
+          const merged = {};
+          for (const day of DAYS) {
+            merged[day] = {
+              ...INITIAL_ROUTINES[day],
+              ...data.routines[day],
+              color: INITIAL_ROUTINES[day].color,
+              emoji: INITIAL_ROUTINES[day].emoji,
+            };
+          }
+          setRoutines(merged);
+        }
         setSha(fileSha);
       } else {
         // fallback to localStorage
