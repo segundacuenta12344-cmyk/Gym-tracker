@@ -93,72 +93,196 @@
         {
           "id": 1,
           "name": "Press banca barra",
-          "repsRange": "5–6"
+          "repsRange": "5â6"
         },
         {
           "id": 2,
           "name": "Press inclinado mancuernas",
-          "repsRange": "8–10"
+          "repsRange": "8â10"
         },
         {
           "id": 3,
           "name": "Press militar barra",
-          "repsRange": "5–6"
+          "repsRange": "5â6"
         },
         {
           "id": 4,
           "name": "Elevaciones laterales",
-          "repsRange": "12–15"
+          "repsRange": "12â15"
         },
         {
           "id": 5,
           "name": "Fondos",
-          "repsRange": "6–8"
+          "repsRange": "6â8"
         },
         {
           "id": 6,
-          "name": "Tríceps polea",
-          "repsRange": "12–15"
+          "name": "TrÃ­ceps polea",
+          "repsRange": "12â15"
         }
       ],
       "note": "",
       "progress": 6
+    },
+    {
+      "routine": "Push A",
+      "date": "21 abr 2026",
+      "sets": {
+        "1": [
+          {
+            "kg": "2",
+            "reps": "6"
+          },
+          {
+            "kg": "36",
+            "reps": "5"
+          },
+          {
+            "kg": "",
+            "reps": ""
+          },
+          {
+            "kg": "",
+            "reps": ""
+          }
+        ],
+        "2": [
+          {
+            "kg": "",
+            "reps": ""
+          },
+          {
+            "kg": "",
+            "reps": ""
+          },
+          {
+            "kg": "",
+            "reps": ""
+          }
+        ],
+        "3": [
+          {
+            "kg": "",
+            "reps": ""
+          },
+          {
+            "kg": "",
+            "reps": ""
+          },
+          {
+            "kg": "",
+            "reps": ""
+          }
+        ],
+        "4": [
+          {
+            "kg": "",
+            "reps": ""
+          },
+          {
+            "kg": "",
+            "reps": ""
+          },
+          {
+            "kg": "",
+            "reps": ""
+          }
+        ],
+        "5": [
+          {
+            "kg": "",
+            "reps": ""
+          },
+          {
+            "kg": "",
+            "reps": ""
+          },
+          {
+            "kg": "",
+            "reps": ""
+          }
+        ],
+        "6": [
+          {
+            "kg": "",
+            "reps": ""
+          },
+          {
+            "kg": "",
+            "reps": ""
+          }
+        ]
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "name": "Press banca barra",
+          "repsRange": "5â6"
+        },
+        {
+          "id": 2,
+          "name": "Press inclinado mancuernas",
+          "repsRange": "8â10"
+        },
+        {
+          "id": 3,
+          "name": "Press militar barra",
+          "repsRange": "5â6"
+        },
+        {
+          "id": 4,
+          "name": "Elevaciones laterales",
+          "repsRange": "12â15"
+        },
+        {
+          "id": 5,
+          "name": "Fondos",
+          "repsRange": "6â8"
+        },
+        {
+          "id": 6,
+          "name": "TrÃ­ceps polea",
+          "repsRange": "12â15"
+        }
+      ],
+      "note": "",
+      "progress": 11
     }
   ],
   "routines": {
     "Push A": {
       "color": "#FF6B35",
-      "emoji": "🔥",
+      "emoji": "ð¥",
       "exercises": [
         {
           "id": 1,
           "name": "Press banca barra",
-          "repsRange": "5–6"
+          "repsRange": "5â6"
         },
         {
           "id": 2,
           "name": "Press inclinado mancuernas",
-          "repsRange": "8–10"
+          "repsRange": "8â10"
         },
         {
           "id": 3,
           "name": "Press militar barra",
-          "repsRange": "5–6"
+          "repsRange": "5â6"
         },
         {
           "id": 4,
           "name": "Elevaciones laterales",
-          "repsRange": "12–15"
+          "repsRange": "12â15"
         },
         {
           "id": 5,
           "name": "Fondos",
-          "repsRange": "6–8"
+          "repsRange": "6â8"
         },
         {
           "id": 6,
-          "name": "Tríceps polea",
-          "repsRange": "12–15"
+          "name": "TrÃ­ceps polea",
+          "repsRange": "12â15"
         }
       ],
       "defaultSets": {
@@ -172,37 +296,37 @@
     },
     "Pull A": {
       "color": "#4ECDC4",
-      "emoji": "💪",
+      "emoji": "ðª",
       "exercises": [
         {
           "id": 7,
-          "name": "Jalón / Dominadas",
-          "repsRange": "5–6"
+          "name": "JalÃ³n / Dominadas",
+          "repsRange": "5â6"
         },
         {
           "id": 8,
           "name": "Remo barra",
-          "repsRange": "5–6"
+          "repsRange": "5â6"
         },
         {
           "id": 9,
-          "name": "Remo máquina unilateral",
-          "repsRange": "8–10"
+          "name": "Remo mÃ¡quina unilateral",
+          "repsRange": "8â10"
         },
         {
           "id": 10,
           "name": "Face pull",
-          "repsRange": "12–15"
+          "repsRange": "12â15"
         },
         {
           "id": 11,
           "name": "Curl barra",
-          "repsRange": "8–10"
+          "repsRange": "8â10"
         },
         {
           "id": 12,
           "name": "Curl martillo",
-          "repsRange": "10–12"
+          "repsRange": "10â12"
         }
       ],
       "defaultSets": {
@@ -216,37 +340,37 @@
     },
     "Legs": {
       "color": "#A855F7",
-      "emoji": "🦵",
+      "emoji": "ð¦µ",
       "exercises": [
         {
           "id": 13,
           "name": "Sentadilla",
-          "repsRange": "5–6"
+          "repsRange": "5â6"
         },
         {
           "id": 14,
           "name": "Prensa",
-          "repsRange": "10–12"
+          "repsRange": "10â12"
         },
         {
           "id": 15,
           "name": "Peso muerto rumano",
-          "repsRange": "8–10"
+          "repsRange": "8â10"
         },
         {
           "id": 16,
           "name": "Curl femoral",
-          "repsRange": "10–12"
+          "repsRange": "10â12"
         },
         {
           "id": 17,
-          "name": "Extensión cuádriceps",
-          "repsRange": "12–15"
+          "name": "ExtensiÃ³n cuÃ¡driceps",
+          "repsRange": "12â15"
         },
         {
           "id": 18,
           "name": "Gemelos",
-          "repsRange": "12–20"
+          "repsRange": "12â20"
         }
       ],
       "defaultSets": {
