@@ -364,6 +364,49 @@ function HistoryView({ sessions, onBack, onDelete }) {
   );
 }
 
+function ConfigView({ token, onDisconnect, onBack }) {
+  const [copied, setCopied] = React.useState(false);
+  const url = `https://segundacuenta12344-cmyk.github.io/Gym-tracker/#${token}`;
+
+  const copyUrl = () => {
+    navigator.clipboard.writeText(url).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
+  };
+
+  return (
+    <div>
+      <button onClick={onBack} style={{...btnBase,background:"none",color:"rgba(255,255,255,0.5)",fontSize:"14px",padding:"0 0 24px 0",gap:"6px"}}>← Volver</button>
+      <div style={{fontSize:"10px",letterSpacing:"0.2em",color:"rgba(255,255,255,0.3)",fontFamily:"monospace",marginBottom:"8px"}}>CONFIGURACIÓN</div>
+      <h2 style={{fontSize:"26px",fontWeight:800,color:"#fff",marginBottom:"28px"}}>Cuenta GitHub</h2>
+
+      <div style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"12px",padding:"20px",marginBottom:"16px"}}>
+        <div style={{fontSize:"11px",color:"rgba(255,255,255,0.3)",fontFamily:"monospace",letterSpacing:"0.1em",marginBottom:"10px"}}>TU ENLACE PERMANENTE</div>
+        <p style={{fontSize:"12px",color:"rgba(255,255,255,0.4)",lineHeight:1.6,marginBottom:"14px"}}>
+          Guarda este enlace en tus marcadores o notas. Si alguna vez pierdes el acceso, ábrelo y la app se conectará automáticamente sin pedir el token.
+        </p>
+        <div style={{background:"rgba(255,255,255,0.06)",borderRadius:"8px",padding:"10px 12px",fontFamily:"monospace",fontSize:"11px",color:"rgba(255,255,255,0.5)",wordBreak:"break-all",marginBottom:"12px"}}>
+          {url}
+        </div>
+        <button onClick={copyUrl}
+          style={{...btnBase,width:"100%",padding:"11px",background:copied?"rgba(78,205,196,0.2)":"rgba(255,255,255,0.08)",border:`1px solid ${copied?"#4ECDC4":"rgba(255,255,255,0.1)"}`,borderRadius:"8px",color:copied?"#4ECDC4":"rgba(255,255,255,0.6)",fontSize:"13px",fontWeight:700,letterSpacing:"0.05em",transition:"all 0.2s"}}>
+          {copied ? "✓ COPIADO" : "COPIAR ENLACE"}
+        </button>
+      </div>
+
+      <div style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"12px",padding:"20px",marginBottom:"16px"}}>
+        <div style={{fontSize:"11px",color:"rgba(255,255,255,0.3)",fontFamily:"monospace",letterSpacing:"0.1em",marginBottom:"10px"}}>TOKEN ACTIVO</div>
+        <div style={{fontFamily:"monospace",fontSize:"12px",color:"rgba(255,255,255,0.3)",wordBreak:"break-all"}}>
+          {token.slice(0,8)}{"•".repeat(token.length - 12)}{token.slice(-4)}
+        </div>
+      </div>
+
+      <button onClick={onDisconnect}
+        style={{...btnBase,width:"100%",padding:"13px",background:"transparent",border:"1px solid rgba(255,80,80,0.3)",borderRadius:"10px",color:"rgba(255,100,100,0.6)",fontSize:"13px",letterSpacing:"0.05em"}}>
+        Desconectar cuenta
+      </button>
+    </div>
+  );
+}
+
 function App() {
   const [view, setView] = useState("home");
   const [active, setActive] = useState(null);
@@ -371,7 +414,12 @@ function App() {
   const [routines, setRoutines] = useState(INITIAL_ROUTINES);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
-  const [token, setToken] = useState(() => ls("ppl:token", null));
+  const [token, setToken] = useState(() => {
+    // Check URL hash first (most persistent), then localStorage
+    const hash = window.location.hash.slice(1);
+    if (hash && hash.startsWith("ghp_")) { lsSave("ppl:token", hash); return hash; }
+    return ls("ppl:token", null);
+  });
   const [sha, setSha] = useState(null);
 
   useEffect(()=>{
@@ -413,7 +461,7 @@ function App() {
     await persist(sessions, u, sha);
   };
 
-  if (!token) return <SetupScreen onSave={t => { setToken(t); setLoading(true); }} />;
+  if (!token) return <SetupScreen onSave={t => { window.location.hash = t; setToken(t); setLoading(true); }} />;
   if (loading) return <div className="loading">CARGANDO...</div>;
 
   return (
@@ -428,8 +476,8 @@ function App() {
                   ? <div style={{fontSize:"10px",color:"#4ECDC4",fontFamily:"monospace",letterSpacing:"0.08em"}}>GUARDANDO...</div>
                   : <div style={{fontSize:"10px",color:"rgba(255,255,255,0.2)",fontFamily:"monospace",letterSpacing:"0.08em"}}>✓ GitHub</div>
                 }
-                <button onClick={()=>{ lsSave("ppl:token",null); localStorage.removeItem("ppl:token"); setToken(null); }}
-                  style={{...btnBase,background:"none",fontSize:"11px",color:"rgba(255,255,255,0.2)",padding:"2px 4px"}} title="Desconectar">⚙</button>
+                <button onClick={()=>setView("config")}
+                  style={{...btnBase,background:"none",fontSize:"14px",color:"rgba(255,255,255,0.2)",padding:"2px 4px"}} title="Configuración">⚙</button>
               </div>
             </div>
             <h1 style={{fontSize:"36px",fontWeight:800,color:"#fff",lineHeight:1}}>
@@ -490,6 +538,9 @@ function App() {
       )}
       {view==="history"&&(
         <HistoryView sessions={sessions} onBack={()=>setView("home")} onDelete={delSession}/>
+      )}
+      {view==="config"&&(
+        <ConfigView token={token} onDisconnect={()=>{ lsSave("ppl:token",null); localStorage.removeItem("ppl:token"); window.location.hash=""; setToken(null); }} onBack={()=>setView("home")}/>
       )}
     </div>
   );
